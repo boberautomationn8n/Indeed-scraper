@@ -21,3 +21,12 @@ Both documented public API endpoints returned HTTP 200 in live local probes. The
 Automated tests cover normalization, attribution, escaped HTML, unknown metadata, keywords/location, salary comparison, date windows, six-hour caching, HTTP/malformed responses, bounded pagination/deduplication and visible partial failures. Cloud verification is recorded after deployment.
 
 Local compiled Actor: succeeded, four feed pages, 915 unique jobs inspected, 67 title matches for AI OR automation, ten saved, zero source errors. The initial local storage environment setting was corrected to CRAWLEE_STORAGE_DIR. Live data revealed Arbeitnow country-domain links; the adapter and regression test now support those documented domains.
+
+## Deployment result
+14 automated tests passed; TypeScript checks and build passed; Apify official input-schema validation passed; npm production audit reported zero vulnerabilities. Removed 166 installed packages.
+
+Implementation commit: 529b408, pushed to GitHub main. Apify automatic build 0.0.4 succeeded in 15 seconds. Cloud run JTVfU6L8ymKWjwALq saved ten results in six seconds. Follow-up run VvipZWYL0doFQbUuE succeeded in two seconds: 915 inspected, 67 keyword matches, 50 saved, four cached pages, zero source errors. The second run confirmed persistent caching without additional feed requests.
+
+Actor display name is now Public Job Research; its unique name and GitHub repository retain Indeed-scraper for continuity. Saved input searches AI OR automation in titles, across both feeds, without company or location restrictions, with three Arbeitnow pages and a fifty-result limit.
+
+Results are keyword matches, not CV-based recommendations. Salary metadata is sparse, source-specific duplicates with different IDs/URLs can remain, and remote eligibility requires downstream review.
