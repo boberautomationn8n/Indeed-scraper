@@ -1,0 +1,229 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "required": [
+      "source_job_id",
+      "listing_key",
+      "title",
+      "job_url",
+      "description_text"
+    ],
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "source": {
+        "type": "string"
+      },
+      "source_job_id": {
+        "type": "string"
+      },
+      "listing_key": {
+        "type": "string"
+      },
+      "country": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "job_url": {
+        "type": "string"
+      },
+      "application_method": {
+        "type": "string"
+      },
+      "workplace_type": {
+        "type": "string"
+      },
+      "seniority": {
+        "type": "string"
+      },
+      "description_text": {
+        "type": "string"
+      },
+      "posted_at_precision": {
+        "type": "string"
+      },
+      "scraped_at": {
+        "type": "string"
+      },
+      "search_query": {
+        "type": "string"
+      },
+      "search_location": {
+        "type": "string"
+      },
+      "company_name": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "apply_url": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "location_text": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "workplace_evidence": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "remote_restrictions_text": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "seniority_evidence": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "salary_text": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "salary_currency": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "salary_period": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "posted_at": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "posted_text": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "salary_min": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "salary_max": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "easy_apply": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "apply_url_is_redirect": {
+        "type": "boolean"
+      },
+      "employment_types": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "quality_flags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "views": {
+    "jobs": {
+      "title": "Matching jobs",
+      "transformation": {
+        "fields": [
+          "title",
+          "company_name",
+          "location_text",
+          "workplace_type",
+          "employment_types",
+          "seniority",
+          "salary_text",
+          "easy_apply",
+          "posted_at",
+          "job_url",
+          "quality_flags"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "title": {
+            "label": "title",
+            "format": "text"
+          },
+          "company_name": {
+            "label": "company name",
+            "format": "text"
+          },
+          "location_text": {
+            "label": "location text",
+            "format": "text"
+          },
+          "workplace_type": {
+            "label": "workplace type",
+            "format": "text"
+          },
+          "employment_types": {
+            "label": "employment types",
+            "format": "text"
+          },
+          "seniority": {
+            "label": "seniority",
+            "format": "text"
+          },
+          "salary_text": {
+            "label": "salary text",
+            "format": "text"
+          },
+          "easy_apply": {
+            "label": "easy apply",
+            "format": "text"
+          },
+          "posted_at": {
+            "label": "posted at",
+            "format": "text"
+          },
+          "job_url": {
+            "label": "job url",
+            "format": "link"
+          },
+          "quality_flags": {
+            "label": "quality flags",
+            "format": "text"
+          }
+        }
+      }
+    }
+  }
+}
