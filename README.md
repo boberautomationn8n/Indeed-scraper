@@ -116,6 +116,8 @@ The Docker image supplies Chromium. Local runs need an installed Playwright brow
 
 `scripts/probe.mjs` and `scripts/browser-probe.mjs` make one public search request to diagnose access. Their HTML outputs go to ignored `tmp/`. They do not use user browser cookies. To regenerate the committed Actor schemas after editing their generator, run `node scripts/generate-schemas.mjs`.
 
+The lockfile and npm overrides pin patched `basic-ftp` and `minimatch` transitive releases. The production dependency audit was clean on 2026-11-23. Recheck it when updating packages.
+
 ## Deploy from GitHub to Apify
 
 1. Create an Actor using **Git repository** as its source.

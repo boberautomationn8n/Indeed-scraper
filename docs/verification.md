@@ -5,6 +5,7 @@
 - `npm run build`: TypeScript compilation.
 - `npm test`: 17 offline regression tests covering structured/HTML extraction, duplicate IDs, salary currency/period handling, missing data, unsafe application links, date windows, and filter combinations.
 - `apify-cli validate-schema .actor/input_schema.json`: official Apify input-schema validator.
+- `npm audit --omit=dev`: zero reported production advisories after pinning patched `basic-ftp` and `minimatch` transitive releases; build and regression tests were rerun successfully.
 - Compiled Actor startup in a fresh local storage directory: initialized Apify and Crawlee, opened the browser, attempted the search, caught the security response, wrote SUMMARY with `status: failed`, and exited nonzero. This verifies failure reporting, not successful collection.
 
 ## Live access tests
@@ -20,5 +21,6 @@ These browsers used fresh contexts, not the user's Chrome cookies/profile. No se
 - Browser UI audit covered the US AI automation and New York internship searches plus four job detail panels.
 - UK and Poland adapters are experimental; do not advertise them as live-tested.
 - A successful Apify cloud build and live cloud collection must be checked separately. Current local access results do not demonstrate working live retrieval.
+- First GitHub-triggered cloud build exposed file ownership on the copied lockfile. Docker COPY directives now assign files to the base image's `myuser` account.
 - Fixture tests cannot guarantee complete recall, selectors surviving future layout changes, or correctness of employer-supplied salaries and dates.
 - Authentication, application submission, cross-site deduplication, and CV matching belong to later workflow stages.

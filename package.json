@@ -23,5 +23,9 @@
     "@types/node": "^24.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "basic-ftp": "6.2.6",
+    "minimatch": "11.0.9"
   }
 }
