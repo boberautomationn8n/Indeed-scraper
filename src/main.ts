@@ -1,13 +1,14 @@
 import { Actor } from 'apify';
 import { parseInput } from './input.js';
-import { runResearch } from './crawler.js';
+import { runResearch } from './research.js';
 
 await Actor.main(async () => {
     const input = parseInput(await Actor.getInput());
-    const proxyConfiguration = input.proxyConfiguration
-        ? await Actor.createProxyConfiguration(input.proxyConfiguration) : undefined;
-    await runResearch(input, {
-        saveJob: job => Actor.pushData(job),
+    const cache = await Actor.openKeyValueStore('job-research-public-feed-cache');
+    const summary = await runResearch(input, {
+        cache,
+        saveJobs: jobs => Actor.pushData(jobs),
         saveSummary: summary => Actor.setValue('SUMMARY', summary),
-    }, proxyConfiguration);
+    });
+    console.log(JSON.stringify(summary));
 });

@@ -1,4 +1,4 @@
-FROM apify/actor-node-playwright-chrome:24-1.65.1-slim
+FROM apify/actor-node:24-slim
 COPY --chown=myuser:myuser package*.json ./
 RUN npm ci --include=dev --ignore-scripts
 COPY --chown=myuser:myuser . ./

@@ -4,6 +4,14 @@ import type { Job } from './types.js';
 export function evaluateJob(job: Job, input: Input, now = new Date()): string[] {
     const reasons: string[] = [];
     const allowUnknown = input.includeUnknownMetadata;
+    const words = (s: string) => s.toLocaleLowerCase().match(/[\p{L}\p{N}+#]+/gu) ?? [];
+    const haystack = new Set(words(`${job.title} ${input.searchInDescription ? job.description_text : ''}`));
+    if (!input.jobTitles.some(query => {
+        const tokens = words(query);
+        return tokens.length > 0 && tokens.every(token => haystack.has(token));
+    })) reasons.push('keywords');
+    if (input.locations.length && !input.locations.some(value =>
+        job.location_text?.toLocaleLowerCase().includes(value.toLocaleLowerCase()))) reasons.push('location');
     if (job.quality_flags.includes('expired')) reasons.push('expired');
     if (input.workplaceTypes.length && !input.workplaceTypes.includes(job.workplace_type as Input['workplaceTypes'][number])
         && !(allowUnknown && job.workplace_type === 'unknown')) reasons.push('workplace');
@@ -11,7 +19,6 @@ export function evaluateJob(job: Job, input: Input, now = new Date()): string[] 
         && !(allowUnknown && !job.employment_types.length)) reasons.push('job_type');
     if (input.experienceLevels.length && !input.experienceLevels.includes(job.seniority as Input['experienceLevels'][number])
         && !(allowUnknown && job.seniority === 'unknown')) reasons.push('experience');
-    if (input.easyApplyOnly && job.easy_apply !== true) reasons.push('not_verified_easy_apply');
     if (input.datePosted !== 'any') {
         if (!job.posted_at) { if (!allowUnknown) reasons.push('unknown_posted_date'); }
         else {

@@ -1,26 +1,23 @@
-# Verification — 2026-11-23
+# Verification — public API replacement
+Date: 2026-11-23
 
-## Passed
+## Diagnosis
+The supplied Apify run log failed at page.goto with ERR_EMPTY_RESPONSE before HTML parsing. Prior direct probes also received 403. Altering scrolling or selectors cannot repair denied page access. The user selected authorized feeds rather than direct Indeed collection without permission.
 
-- `npm run build`: TypeScript compilation.
-- `npm test`: 17 offline regression tests covering structured/HTML extraction, duplicate IDs, salary currency/period handling, missing data, unsafe application links, date windows, and filter combinations.
-- `apify-cli validate-schema .actor/input_schema.json`: official Apify input-schema validator.
-- `npm audit --omit=dev`: zero reported production advisories after pinning patched `basic-ftp` and `minimatch` transitive releases; build and regression tests were rerun successfully.
-- Compiled Actor startup in a fresh local storage directory: initialized Apify and Crawlee, opened the browser, attempted the search, caught the security response, wrote SUMMARY with `status: failed`, and exited nonzero. This verifies failure reporting, not successful collection.
+## Research
+Reviewed the public data-scrape/apify-indeed-scraper Python implementation and Eben001/IndeedJobScraper Selenium utilities. Both depend on access to Indeed pages; copying those architectures would not resolve the underlying access/permission issue. No third-party code was copied.
 
-## Live access tests
+Official sources:
+- https://www.indeed.com/legal?co=US&hl=en
+- https://www.indeed.com/robots.txt
+- https://www.arbeitnow.com/blog/job-board-api
+- https://www.arbeitnow.com/terms
+- https://github.com/remotive-com/remote-jobs-api
+- https://docs.apify.com/actors/development/actor-definition/dockerfile
 
-1. Direct HTTP search: HTTP 403, `Security Check - Indeed.com`, no job markers.
-2. Fresh isolated headless Playwright search: HTTP 403, `Blocked - Indeed.com`, zero job cards.
-3. Compiled Actor browser run, one keyword/location and a two-job limit: HTTP 403; run failed explicitly with zero accepted jobs.
+## Checks
+Both documented public API endpoints returned HTTP 200 in live local probes. The first Arbeitnow page returned 300 jobs; the Remotive public feed returned 15 jobs. These counts describe the probe, not fixed provider coverage. The feed payloads are kept locally under ignored tmp/feed-probe for inspection, not committed.
 
-These browsers used fresh contexts, not the user's Chrome cookies/profile. No security challenge was solved and no paid proxy was enabled.
+Automated tests cover normalization, attribution, escaped HTML, unknown metadata, keywords/location, salary comparison, date windows, six-hour caching, HTTP/malformed responses, bounded pagination/deduplication and visible partial failures. Cloud verification is recorded after deployment.
 
-## Scope and remaining validation
-
-- Browser UI audit covered the US AI automation and New York internship searches plus four job detail panels.
-- UK and Poland adapters are experimental; do not advertise them as live-tested.
-- A successful Apify cloud build and live cloud collection must be checked separately. Current local access results do not demonstrate working live retrieval.
-- First GitHub-triggered cloud build exposed file ownership on the copied lockfile. Docker COPY directives now assign files to the base image's `myuser` account.
-- Fixture tests cannot guarantee complete recall, selectors surviving future layout changes, or correctness of employer-supplied salaries and dates.
-- Authentication, application submission, cross-site deduplication, and CV matching belong to later workflow stages.
+Local compiled Actor: succeeded, four feed pages, 915 unique jobs inspected, 67 title matches for AI OR automation, ten saved, zero source errors. The initial local storage environment setting was corrected to CRAWLEE_STORAGE_DIR. Live data revealed Arbeitnow country-domain links; the adapter and regression test now support those documented domains.

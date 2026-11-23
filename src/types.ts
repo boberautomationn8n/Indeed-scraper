@@ -1,28 +1,18 @@
-import type { Country, JOB_TYPES, LEVELS, PERIODS, WORKPLACES } from './input.js';
-
-export interface JobSeed {
-    id: string;
-    url: string;
-    title: string | null;
-    company: string | null;
-    location: string | null;
-    postedText: string | null;
-    query: string;
-    searchLocation: string;
-}
+import type { SOURCES, JOB_TYPES, LEVELS, PERIODS, WORKPLACES } from './input.js';
+export type Source = typeof SOURCES[number];
 export interface Job {
-    schema_version: 1;
-    source: 'indeed';
+    schema_version: 2;
+    source: Source;
+    source_name: string;
+    source_url: string;
     source_job_id: string;
     listing_key: string;
-    country: Country;
     title: string;
-    company_name: string | null;
+    company_name: string;
     job_url: string;
-    apply_url: string | null;
-    application_method: 'indeed' | 'external' | 'unknown';
-    apply_url_is_redirect: boolean;
-    easy_apply: boolean | null;
+    apply_url: null;
+    application_method: 'source_listing';
+    easy_apply: null;
     location_text: string | null;
     workplace_type: typeof WORKPLACES[number] | 'unknown';
     workplace_evidence: string | null;
@@ -37,10 +27,8 @@ export interface Job {
     salary_period: typeof PERIODS[number] | null;
     description_text: string;
     posted_at: string | null;
-    posted_at_precision: 'date' | 'datetime' | 'relative_day' | 'unknown';
-    posted_text: string | null;
+    posted_at_precision: 'date' | 'datetime' | 'unknown';
+    feed_fetched_at: string;
     scraped_at: string;
-    search_query: string;
-    search_location: string;
     quality_flags: string[];
 }

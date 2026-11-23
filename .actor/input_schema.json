@@ -1,31 +1,30 @@
 {
-  "title": "Indeed Job Research",
+  "title": "Public Job Research",
   "type": "object",
   "schemaVersion": 1,
-  "description": "Search Indeed, read full job descriptions, apply your preferences, and return one standard record per job. Country selects the market, not just the language. UK and Poland adapters are experimental. Security challenges are reported as failures. No applications are submitted.",
   "additionalProperties": false,
+  "description": "Search public feeds across employers. Arbeitnow primarily covers Germany/Europe; Remotive provides a limited, delayed remote-job feed. No Indeed scraping, company list, or applications. Results retain source attribution. Feeds are cached for six hours.",
   "properties": {
-    "country": {
-      "title": "Country / job market",
-      "description": "US is the inspected market. UK and Poland are experimental and may expose different fields.",
-      "type": "string",
+    "sources": {
+      "title": "Job sources",
+      "description": "Select feeds to combine. These do not cover the entire job market.",
+      "type": "array",
       "editor": "select",
-      "enum": [
-        "us",
-        "gb",
-        "pl"
-      ],
-      "enumTitles": [
-        "United States",
-        "United Kingdom (experimental)",
-        "Poland (experimental)"
-      ],
-      "default": "us",
-      "sectionCaption": "Search"
+      "items": {
+        "type": "string",
+        "enum": [
+          "arbeitnow",
+          "remotive"
+        ]
+      },
+      "default": [
+        "arbeitnow",
+        "remotive"
+      ]
     },
     "jobTitles": {
       "title": "Job titles or keywords",
-      "description": "Enter each search as a separate entry. Entries are searched separately and their results combined. These are keyword searches, not guaranteed exact-title matches.",
+      "description": "One alternative per entry. Every word within an entry must match (case insensitive, whole words). Example: AI automation requires both words; separate AI and automation entries match either. Title only by default.",
       "type": "array",
       "editor": "stringList",
       "items": {
@@ -34,33 +33,30 @@
       "minItems": 1,
       "maxItems": 20,
       "prefill": [
-        "AI automation engineer",
-        "AI automation intern"
+        "AI",
+        "automation"
       ]
     },
+    "searchInDescription": {
+      "title": "Also search descriptions",
+      "description": "Include description words in keyword matching; this can return less relevant jobs.",
+      "type": "boolean",
+      "default": false
+    },
     "locations": {
-      "title": "Locations",
-      "description": "One city or region per entry. Leave empty to search without a city restriction inside the selected market. Remote does not mean worldwide eligibility.",
+      "title": "Location text",
+      "description": "Optional alternatives matched against the source location text. No radius, country inference, or eligibility checking. Remote Worldwide will not match Poland automatically. Empty means no location restriction.",
       "type": "array",
       "editor": "stringList",
       "items": {
         "type": "string"
       },
       "default": [],
-      "maxItems": 10
-    },
-    "radius": {
-      "title": "Search distance",
-      "description": "Distance around each location. Miles for US/UK; kilometers for Poland. Zero means exact location. Indeed may adjust supported distances.",
-      "type": "integer",
-      "editor": "number",
-      "default": 25,
-      "minimum": 0,
-      "maximum": 100
+      "maxItems": 20
     },
     "workplaceTypes": {
       "title": "Work arrangement",
-      "description": "Choose any combination. Empty means all. Onsite requires explicit evidence; missing remote labels are not treated as onsite.",
+      "description": "Empty means all. Non-remote is not assumed to mean onsite. Hybrid/onsite require an explicit label.",
       "type": "array",
       "editor": "select",
       "items": {
@@ -69,18 +65,13 @@
           "remote",
           "hybrid",
           "onsite"
-        ],
-        "enumTitles": [
-          "Remote",
-          "Hybrid",
-          "Onsite / in person"
         ]
       },
       "default": []
     },
     "jobTypes": {
       "title": "Job types",
-      "description": "Choose any combination. Empty means all. Checked against full details; a listing can have multiple types.",
+      "description": "Empty means all. Multiple selections are alternatives.",
       "type": "array",
       "editor": "select",
       "items": {
@@ -91,20 +82,13 @@
           "contract",
           "temporary",
           "internship"
-        ],
-        "enumTitles": [
-          "Full-time",
-          "Part-time",
-          "Contract",
-          "Temporary",
-          "Internship"
         ]
       },
       "default": []
     },
     "experienceLevels": {
       "title": "Experience level",
-      "description": "Choose any combination. Empty means all. Uses explicit seniority in the title or structured experience data; unlabelled roles stay unknown.",
+      "description": "Uses explicit title/feed labels. Unlabelled roles remain unknown.",
       "type": "array",
       "editor": "select",
       "items": {
@@ -113,24 +97,13 @@
           "entry",
           "mid",
           "senior"
-        ],
-        "enumTitles": [
-          "Entry / junior / intern",
-          "Mid level",
-          "Senior / lead / staff"
         ]
       },
       "default": []
     },
-    "easyApplyOnly": {
-      "title": "Easily apply on Indeed only",
-      "description": "Require a verified Indeed application link or label. This does not submit an application.",
-      "type": "boolean",
-      "default": false
-    },
     "datePosted": {
-      "title": "Date posted",
-      "description": "Checked against available posting dates. Missing dates follow Include unknown metadata. Date-only/relative labels are approximate, not exact timestamps.",
+      "title": "Feed publication date",
+      "description": "Feed dates can differ from the original employer posting date. Remotive has date-only precision and a 24-hour feed delay.",
       "type": "string",
       "editor": "select",
       "enum": [
@@ -140,41 +113,18 @@
         "7",
         "14"
       ],
-      "enumTitles": [
-        "Any time",
-        "Last 24 hours",
-        "Last 3 days",
-        "Last 7 days",
-        "Last 14 days"
-      ],
       "default": "any"
-    },
-    "sortBy": {
-      "title": "Sort results",
-      "description": "Newest is useful for recurring searches. This controls the search order; promoted listings may still be shown by Indeed.",
-      "type": "string",
-      "editor": "select",
-      "enum": [
-        "date",
-        "relevance"
-      ],
-      "enumTitles": [
-        "Newest",
-        "Relevance"
-      ],
-      "default": "date"
     },
     "minimumSalary": {
       "title": "Minimum salary",
-      "description": "Optional minimum. Salary ranges match if their upper bound reaches this amount. No currency or pay-period conversion is performed.",
+      "description": "Optional. A range matches when its upper bound reaches the minimum. No exchange-rate or period conversion. Salary data is sparse; Arbeitnow has no structured salary field.",
       "type": "integer",
       "editor": "number",
-      "minimum": 0,
-      "sectionCaption": "Salary"
+      "minimum": 0
     },
     "salaryCurrency": {
       "title": "Salary currency",
-      "description": "Leave unset to use USD for US, GBP for UK, or PLN for Poland. Different currencies are treated as non-comparable.",
+      "description": "Only explicit currencies are compared. A bare dollar sign is ambiguous.",
       "type": "string",
       "editor": "select",
       "enum": [
@@ -183,16 +133,11 @@
         "PLN",
         "EUR"
       ],
-      "enumTitles": [
-        "USD",
-        "GBP",
-        "PLN",
-        "EUR"
-      ]
+      "default": "EUR"
     },
     "salaryPeriod": {
       "title": "Salary period",
-      "description": "Compare only salaries with this same period. For example, an hourly salary is not silently converted to yearly.",
+      "description": "Only explicit periods are compared; annual pay is not inferred.",
       "type": "string",
       "editor": "select",
       "enum": [
@@ -202,96 +147,37 @@
         "MONTH",
         "YEAR"
       ],
-      "enumTitles": [
-        "Hourly",
-        "Daily",
-        "Weekly",
-        "Monthly",
-        "Yearly"
-      ],
       "default": "YEAR"
     },
     "includeUnknownSalary": {
-      "title": "Keep undisclosed / non-comparable salaries",
-      "description": "When a salary minimum is set, retain jobs whose salary cannot be compared. Otherwise exclude those jobs.",
+      "title": "Keep unknown or non-comparable salaries",
+      "description": "When a minimum is set, keep undisclosed, ambiguous, or different-currency/period salaries. Switch off to require a comparable salary.",
       "type": "boolean",
       "default": true
     },
     "includeUnknownMetadata": {
       "title": "Keep unknown filter values",
-      "description": "When selecting work arrangement, experience, job types, or dates, keep jobs with missing values. Easy Apply only always requires evidence.",
+      "description": "When an arrangement, job type, experience or date filter is selected, retain jobs missing that metadata.",
       "type": "boolean",
       "default": false
     },
     "maxResults": {
       "title": "Maximum matching jobs",
-      "description": "Maximum jobs written to the dataset. Duplicate Indeed job IDs count once per run.",
+      "description": "Newest matches saved, up to this limit. Deduplication is within a run using source ID and listing URL.",
       "type": "integer",
       "editor": "number",
-      "default": 50,
       "minimum": 1,
       "maximum": 1000,
-      "sectionCaption": "Run limits"
+      "default": 50
     },
-    "maxCandidates": {
-      "title": "Maximum jobs to inspect",
-      "description": "Maximum unique job detail pages. Must be at least Maximum matching jobs. Restrictive filters may produce fewer matches before this limit.",
+    "maxPages": {
+      "title": "Maximum Arbeitnow pages",
+      "description": "Fetch these pages once, then filter locally. Remotive uses one feed request regardless of this value. Strict filters may return zero matches.",
       "type": "integer",
       "editor": "number",
-      "default": 200,
       "minimum": 1,
-      "maximum": 5000
-    },
-    "maxPagesPerSearch": {
-      "title": "Maximum pages per search",
-      "description": "Maximum result pages for each title/location combination. A bounded search does not guarantee every matching Indeed job is collected.",
-      "type": "integer",
-      "editor": "number",
-      "default": 5,
-      "minimum": 1,
-      "maximum": 20
-    },
-    "maxConcurrency": {
-      "title": "Concurrent requests",
-      "description": "Keep low to reduce load. A security block is reported as a failure.",
-      "type": "integer",
-      "editor": "number",
-      "default": 2,
-      "minimum": 1,
-      "maximum": 5
-    },
-    "maxRequestsPerMinute": {
-      "title": "Requests per minute",
-      "description": "Rate cap shared by search and detail requests.",
-      "type": "integer",
-      "editor": "number",
-      "default": 10,
-      "minimum": 1,
-      "maximum": 60
-    },
-    "retrievalMode": {
-      "title": "Page retrieval",
-      "description": "Browser runs JavaScript. HTTP uses Cheerio without a browser and is cheaper when accessible; our direct HTTP probe received 403.",
-      "type": "string",
-      "editor": "select",
-      "enum": [
-        "browser",
-        "http"
-      ],
-      "enumTitles": [
-        "Browser",
-        "HTTP / Cheerio"
-      ],
-      "default": "browser"
-    },
-    "proxyConfiguration": {
-      "title": "Optional proxy",
-      "description": "Off by default. Configure only if you have an authorized proxy service. Proxy charges, if enabled, are separate. Challenges are not solved automatically.",
-      "type": "object",
-      "editor": "proxy",
-      "default": {
-        "useApifyProxy": false
-      }
+      "maximum": 10,
+      "default": 3
     }
   },
   "required": [

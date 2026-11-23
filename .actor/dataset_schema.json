@@ -3,18 +3,23 @@
   "fields": {
     "type": "object",
     "required": [
-      "source_job_id",
       "listing_key",
       "title",
       "job_url",
-      "description_text"
+      "source_name"
     ],
     "properties": {
       "schema_version": {
         "type": "integer",
-        "const": 1
+        "const": 2
       },
       "source": {
+        "type": "string"
+      },
+      "source_name": {
+        "type": "string"
+      },
+      "source_url": {
         "type": "string"
       },
       "source_job_id": {
@@ -23,10 +28,10 @@
       "listing_key": {
         "type": "string"
       },
-      "country": {
+      "title": {
         "type": "string"
       },
-      "title": {
+      "company_name": {
         "type": "string"
       },
       "job_url": {
@@ -47,26 +52,11 @@
       "posted_at_precision": {
         "type": "string"
       },
+      "feed_fetched_at": {
+        "type": "string"
+      },
       "scraped_at": {
         "type": "string"
-      },
-      "search_query": {
-        "type": "string"
-      },
-      "search_location": {
-        "type": "string"
-      },
-      "company_name": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "apply_url": {
-        "type": [
-          "string",
-          "null"
-        ]
       },
       "location_text": {
         "type": [
@@ -116,11 +106,11 @@
           "null"
         ]
       },
-      "posted_text": {
-        "type": [
-          "string",
-          "null"
-        ]
+      "apply_url": {
+        "type": "null"
+      },
+      "easy_apply": {
+        "type": "null"
       },
       "salary_min": {
         "type": [
@@ -133,15 +123,6 @@
           "number",
           "null"
         ]
-      },
-      "easy_apply": {
-        "type": [
-          "boolean",
-          "null"
-        ]
-      },
-      "apply_url_is_redirect": {
-        "type": "boolean"
       },
       "employment_types": {
         "type": "array",
@@ -169,10 +150,9 @@
           "employment_types",
           "seniority",
           "salary_text",
-          "easy_apply",
           "posted_at",
-          "job_url",
-          "quality_flags"
+          "source_name",
+          "job_url"
         ]
       },
       "display": {
@@ -206,21 +186,17 @@
             "label": "salary text",
             "format": "text"
           },
-          "easy_apply": {
-            "label": "easy apply",
-            "format": "text"
-          },
           "posted_at": {
             "label": "posted at",
+            "format": "text"
+          },
+          "source_name": {
+            "label": "source name",
             "format": "text"
           },
           "job_url": {
             "label": "job url",
             "format": "link"
-          },
-          "quality_flags": {
-            "label": "quality flags",
-            "format": "text"
           }
         }
       }

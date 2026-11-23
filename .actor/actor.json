@@ -1,8 +1,8 @@
 {
   "actorSpecification": 1,
-  "name": "indeed-job-research",
-  "title": "Indeed Job Research",
-  "version": "0.1",
+  "name": "public-job-research",
+  "title": "Public Job Research",
+  "version": "0.2",
   "dockerfile": "../Dockerfile",
   "input": "./input_schema.json",
   "storages": {

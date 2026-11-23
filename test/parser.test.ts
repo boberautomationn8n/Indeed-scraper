@@ -1,154 +1,115 @@
-import { test } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractJob, htmlText, parseSalary, classifyWorkplace } from '../src/extract.js';
-import { extractSearch, assertPageAccessible, searchRequests } from '../src/search.js';
 import { parseInput } from '../src/input.js';
+import { normalizeFeed, htmlText, salary } from '../src/extract.js';
 import { evaluateJob } from '../src/filter.js';
-import type { JobSeed } from '../src/types.js';
+import { getFeed, runResearch, type Cache } from '../src/research.js';
+import type { Job } from '../src/types.js';
 
 const now = new Date('2026-11-23T12:00:00Z');
-const seed: JobSeed = { id: '1234567890abcdef', url: 'https://www.indeed.com/viewjob?jk=1234567890abcdef', title: 'AI Engineering Intern', company: 'Example Ltd', location: 'Remote in Boston, MA', postedText: null, query: 'AI intern', searchLocation: '' };
-function page(overrides = {}, extra = '') {
-    return `<html><head><script type="application/ld+json">${JSON.stringify({
-        '@context': 'https://schema.org', '@type': 'JobPosting', title: seed.title,
-        url: seed.url, description: '<p>Build and test AI workflows.</p><p>Location: US (remote)</p>',
-        hiringOrganization: { name: 'Example Ltd' }, employmentType: ['FULL_TIME', 'INTERN'],
-        datePosted: '2026-11-23T08:00:00Z', jobLocationType: 'TELECOMMUTE',
-        applicantLocationRequirements: [{ '@type': 'Country', name: 'United States' }],
-        baseSalary: { currency: 'USD', value: { minValue: 25, maxValue: 35, unitText: 'HOUR' } },
-        ...overrides,
-    })}</script></head><body>${extra}</body></html>`;
+const row = {slug:'junior-ai',title:'Junior AI Automation Engineer',company_name:'Example',
+    description:'&lt;p&gt;Build workflows&lt;/p&gt;',url:'https://www.arbeitnow.com/view/junior-ai',
+    remote:false,location:'Berlin',created_at:now.getTime()/1000-3600,tags:[],job_types:['Full time']};
+const feed = (rows = [row], next: string | null = null) => ({data:rows,links:{next}});
+const job = () => normalizeFeed('arbeitnow',feed(),now.toISOString(),now).jobs[0]!;
+function cache(): Cache {
+    const values = new Map<string,unknown>();
+    return { async getValue<T>(key:string){ return values.get(key) as T ?? null; }, async setValue(k,v){values.set(k,v);} };
 }
-const config = (overrides = {}) => parseInput({ jobTitles: ['AI intern'], ...overrides });
-
-test('JobPosting metadata produces a standard job without fabricating Easy Apply', () => {
-    const job = extractJob(page({ directApply: true }), seed, 'us', now);
-    assert.equal(job.listing_key, 'indeed:1234567890abcdef');
-    assert.equal(job.company_name, 'Example Ltd');
-    assert.deepEqual(job.employment_types, ['full-time', 'internship']);
-    assert.equal(job.seniority, 'entry');
-    assert.equal(job.workplace_type, 'remote');
-    assert.equal(job.remote_restrictions_text, 'United States');
-    assert.equal(job.salary_min, 25);
-    assert.equal(job.salary_max, 35);
-    assert.equal(job.salary_period, 'HOUR');
-    assert.equal(job.easy_apply, null);
-    assert.equal(job.posted_at_precision, 'datetime');
-    assert.match(job.description_text, /Build and test/);
+const response = (data:unknown) => new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
+test('normalizes feed and preserves attribution without inventing onsite or application links',()=>{
+    const j=job();
+    assert.equal(j.listing_key,'arbeitnow:junior-ai');
+    assert.equal(j.description_text,'Build workflows');
+    assert.equal(j.workplace_type,'unknown');
+    assert.equal(j.apply_url,null);
+    assert.equal(j.source_name,'Arbeitnow');
+    assert.equal(j.seniority,'entry');
+    assert.deepEqual(j.employment_types,['full-time']);
 });
-
-test('current rendered layout supports explicit onsite and Indeed application links', () => {
-    const html = `<div data-testid="viewjob-main-content">
-      <h5 data-testid="vj-job-title">Software Developer Intern</h5>
-      <div data-testid="company-info-metadata"><a>Example Ltd</a></div>
-      <div data-testid="structured-job-summary"><div aria-label="$18 to $22 a year">$18 - $22 a year</div><div>Part-time, Full-time</div></div>
-      <a data-testid="viewjob-apply" href="https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?id=example">Apply with Indeed</a>
-      <div class="simple-job-description-html"><style>body { bad: data }</style><p>Learn programming.</p><p>Work Location: In person</p></div></div>`;
-    const job = extractJob(html, { ...seed, location: 'New York, NY' }, 'us', now);
-    assert.equal(job.workplace_type, 'onsite');
-    assert.equal(job.easy_apply, true);
-    assert.deepEqual(job.employment_types, ['full-time', 'part-time', 'internship']);
-    assert.equal(job.salary_period, 'YEAR');
-    assert.equal(job.salary_max, 22);
-    assert.ok(job.quality_flags.includes('salary_unusually_low_for_year'));
-    assert.doesNotMatch(job.description_text, /bad: data/);
+test('strips executable markup and decodes escaped descriptions',()=>{
+    assert.equal(htmlText('<p>Hello</p><script>bad()</script><style>bad{}</style>'),'Hello');
+    assert.equal(htmlText('&lt;div&gt;Hello &amp;amp; welcome&lt;/div&gt;'),'Hello & welcome');
 });
-
-test('company-site links remain redirects and do not trigger Easy Apply', () => {
-    const job = extractJob(page({}, '<a data-testid="viewjob-apply" href="/onboarding?continue=example">Apply on company site</a>'), seed, 'us', now);
-    assert.equal(job.easy_apply, false);
-    assert.equal(job.application_method, 'external');
-    assert.equal(job.apply_url_is_redirect, true);
+test('Remotive restrictions are not treated as worldwide eligibility; date timezone is not invented',()=>{
+    const data={jobs:[{id:123,title:'Senior Data Engineer',company_name:'Example',url:'https://remotive.com/remote-jobs/data/123',
+        description:'<p>Data</p>',job_type:'full_time',publication_date:'2026-11-22T15:00:00',
+        candidate_required_location:'USA',salary:'USD 100k - 120k / year'}]};
+    const j=normalizeFeed('remotive',data,now.toISOString(),now).jobs[0]!;
+    assert.equal(j.workplace_type,'remote');assert.equal(j.remote_restrictions_text,'USA');
+    assert.equal(j.posted_at,'2026-11-22');assert.equal(j.posted_at_precision,'date');
+    assert.equal(j.salary_max,120000);
 });
-
-test('unsafe application URLs are discarded', () => {
-    assert.equal(extractJob(page({}, '<a data-testid="viewjob-apply" href="javascript:alert(1)">Apply</a>'), seed, 'us', now).apply_url, null);
+test('malformed feed fails visibly while a valid empty feed is allowed',()=>{
+    assert.throws(()=>normalizeFeed('arbeitnow',{data:'blocked'},now.toISOString(),now));
+    assert.throws(()=>normalizeFeed('arbeitnow',feed([{...row,url:'https://other.example/job'}]),now.toISOString(),now));
+    assert.equal(normalizeFeed('arbeitnow',feed([]),now.toISOString(),now).jobs.length,0);
 });
-
-test('unknown workplace and mid-level stay unknown without role-specific evidence', () => {
-    const job = extractJob(page({ title: 'Software Engineer', jobLocationType: undefined, description: '<p>Work with senior developers and remote clients.</p>' }), { ...seed, title: 'Software Engineer', location: 'Boston, MA' }, 'us', now);
-    assert.equal(job.workplace_type, 'unknown');
-    assert.equal(job.seniority, 'unknown');
-    assert.equal(classifyWorkplace('Hybrid work in Boston', '', '', {}).type, 'hybrid');
-    assert.equal(classifyWorkplace(null, '', 'Work Location: Not remote', {}).type, 'onsite');
+test('Arbeitnow feed can link to its documented country domains',()=>{
+    for (const host of ['www.arbeitnow.co.uk','www.arbeitnow.fr','www.arbeitnow.ch','www.arbeitnow.nl']) {
+        const url='https://'+host+'/jobs/example';
+        assert.equal(normalizeFeed('arbeitnow',feed([{...row,url}]),now.toISOString(),now).jobs[0]!.job_url,url);
+    }
 });
-
-test('salary parser preserves period, currency, and Polish number formatting', () => {
-    assert.deepEqual(parseSalary('$100,000 - $125,000 a year', undefined, 'us'), { salary_min: 100000, salary_max: 125000, salary_currency: 'USD', salary_period: 'YEAR', flags: [] });
-    const polish = parseSalary('6 000 - 8 000 zł miesięcznie', undefined, 'pl');
-    assert.equal(polish.salary_min, 6000);
-    assert.equal(polish.salary_max, 8000);
-    assert.equal(polish.salary_currency, 'PLN');
-    assert.equal(polish.salary_period, 'MONTH');
-    assert.equal(parseSalary('£70k a year', undefined, 'gb').salary_min, 70000);
+test('keywords are whole words, AND within entry, OR across entries; location is independent',()=>{
+    const j=job();
+    assert.deepEqual(evaluateJob(j,parseInput({jobTitles:['AI automation','marketing']}),now),[]);
+    assert.ok(evaluateJob(j,parseInput({jobTitles:['AI marketing']}),now).includes('keywords'));
+    assert.ok(evaluateJob({...j,title:'Retail Engineer'},parseInput({jobTitles:['AI']}),now).includes('keywords'));
+    assert.ok(evaluateJob(j,parseInput({jobTitles:['AI'],locations:['Poland']}),now).includes('location'));
+    assert.deepEqual(evaluateJob(j,parseInput({jobTitles:['workflows'],searchInDescription:true,locations:['berlin']}),now),[]);
 });
-
-test('filtering unions choices within a category and intersects categories', () => {
-    const job = extractJob(page({}, '<a data-testid="viewjob-apply" href="https://smartapply.indeed.com/apply">Apply with Indeed</a>'), seed, 'us', now);
-    assert.deepEqual(evaluateJob(job, config({ workplaceTypes: ['hybrid', 'remote'], jobTypes: ['internship'], experienceLevels: ['entry'], easyApplyOnly: true, datePosted: '1', minimumSalary: 30, salaryPeriod: 'HOUR' }), now), []);
-    assert.deepEqual(evaluateJob(job, config({ workplaceTypes: ['onsite'], minimumSalary: 40, salaryPeriod: 'HOUR' }), now), ['workplace', 'salary_below_minimum']);
+test('metadata filters require evidence unless keeping unknowns is explicit',()=>{
+    assert.ok(evaluateJob(job(),parseInput({jobTitles:['AI'],workplaceTypes:['onsite']}),now).includes('workplace'));
+    assert.deepEqual(evaluateJob(job(),parseInput({jobTitles:['AI'],workplaceTypes:['onsite'],includeUnknownMetadata:true}),now),[]);
 });
-
-test('salary periods are not silently converted, and unknown policy is explicit', () => {
-    const job = extractJob(page(), seed, 'us', now);
-    assert.deepEqual(evaluateJob(job, config({ minimumSalary: 50000, salaryPeriod: 'YEAR', includeUnknownSalary: false }), now), ['salary_not_comparable']);
-    assert.deepEqual(evaluateJob(job, config({ minimumSalary: 50000, salaryPeriod: 'YEAR', includeUnknownSalary: true }), now), []);
+test('salary has explicit currency and period; international formats and missing values are handled',()=>{
+    assert.deepEqual(salary('EUR 60.000 - 80.000 per year'),{salary_min:60000,salary_max:80000,salary_currency:'EUR',salary_period:'YEAR'});
+    assert.equal(salary('$85k - $155k').salary_currency,null);
+    assert.equal(salary('$85k - $155k').salary_period,null);
+    assert.equal(salary('USD 35,3k - 52k per year').salary_min,35300);
+    const j={...job(),...salary('USD 50k - 70k / year')};
+    assert.ok(evaluateJob(j,parseInput({jobTitles:['AI'],minimumSalary:80000,salaryCurrency:'USD',includeUnknownSalary:false}),now).includes('salary_below_minimum'));
+    assert.ok(evaluateJob(j,parseInput({jobTitles:['AI'],minimumSalary:60000,salaryCurrency:'EUR',includeUnknownSalary:false}),now).includes('salary_not_comparable'));
+    assert.deepEqual(evaluateJob(j,parseInput({jobTitles:['AI'],minimumSalary:60000,salaryCurrency:'USD'}),now),[]);
 });
-
-test('24-hour date filter does not silently become a 48-hour filter', () => {
-    const job = extractJob(page({ datePosted: '2026-11-22T10:00:00Z' }), seed, 'us', now);
-    assert.deepEqual(evaluateJob(job, config({ datePosted: '1' }), now), ['posted_date']);
+test('date window has no silently added extra day',()=>{
+    const input=parseInput({jobTitles:['AI'],datePosted:'1'});
+    assert.deepEqual(evaluateJob(job(),input,now),[]);
+    assert.ok(evaluateJob({...job(),posted_at:'2026-11-22T11:59:59Z'},input,now).includes('posted_date'));
 });
-
-test('missing dates differ from old dates and follow unknown policy', () => {
-    const job = extractJob(page({ datePosted: undefined }), seed, 'us', now);
-    assert.deepEqual(evaluateJob(job, config({ datePosted: '7' }), now), ['unknown_posted_date']);
-    assert.deepEqual(evaluateJob(job, config({ datePosted: '7', includeUnknownMetadata: true }), now), []);
+test('cache avoids a second request within six hours; stale cache refreshes',async()=>{
+    const c=cache();let requests=0;
+    const request:typeof fetch=async()=>{requests++;return response(feed());};
+    assert.equal((await getFeed('arbeitnow',1,c,now,request)).cached,false);
+    assert.equal((await getFeed('arbeitnow',1,c,now,request)).cached,true);
+    await getFeed('arbeitnow',1,c,new Date(now.getTime()+6*3600000),request);
+    assert.equal(requests,2);
 });
-
-test('expired jobs are rejected even with no selected filters', () => {
-    const job = extractJob(page({ validThrough: '2026-11-20' }), seed, 'us', now);
-    assert.deepEqual(evaluateJob(job, config(), now), ['expired']);
+test('HTTP failures do not get cached or turn into empty results',async()=>{
+    const c=cache();
+    await assert.rejects(getFeed('remotive',1,c,now,async()=>new Response('blocked',{status:403})),/HTTP 403/);
+    assert.equal(await c.getValue('remotive-1'),null);
 });
-
-test('relative dates with a plus sign remain unknown rather than fabricated', () => {
-    const job = extractJob(page({ datePosted: undefined }), { ...seed, postedText: 'Posted 30+ days ago' }, 'us', now);
-    assert.equal(job.posted_at, null);
+test('pipeline fetches once per page, deduplicates, sorts, filters and saves bounded results',async()=>{
+    const requests:string[]=[];let saved:Job[]=[];let summary:unknown;
+    const newer={...row,slug:'new',url:'https://www.arbeitnow.com/view/new',created_at:row.created_at+30};
+    const result=await runResearch(parseInput({sources:['arbeitnow'],jobTitles:['AI'],maxPages:2,maxResults:1}),{
+        cache:cache(),now,request:async(url)=>{requests.push(String(url));return response(requests.length===1?feed([row],'next'):feed([row,newer]));},
+        saveJobs:async(jobs)=>{saved=jobs;},saveSummary:async(value)=>{summary=value;},
+    });
+    assert.equal(requests.length,2);assert.equal(result.duplicates,1);assert.equal(result.matched,2);
+    assert.equal(saved.length,1);assert.equal(saved[0]!.source_job_id,'new');assert.equal(result.saved,1);
+    assert.ok(summary);
 });
-
-test('search parsing deduplicates job IDs and follows a safe next-page link', () => {
-    const html = `<ul><li><a data-jk="1234567890abcdef">AI Intern</a><span data-testid="company-name">Example Ltd</span><div data-testid="text-location">New York</div></li><li><a data-jk="1234567890abcdef">AI Intern</a></li></ul><a aria-label="Next Page" href="/jobs?q=AI+intern&amp;l=NY&amp;start=10">Next</a>`;
-    const result = extractSearch(html, 'https://www.indeed.com/jobs?q=AI+intern&l=NY', 'us', 'AI intern', 'NY');
-    assert.equal(result.seeds.length, 1);
-    assert.equal(result.seeds[0]!.company, 'Example Ltd');
-    assert.match(result.seeds[0]!.url, /viewjob\?jk=1234567890abcdef/);
-    assert.match(result.next!, /start=10/);
-    const bad = extractSearch(html.replace('/jobs?q=AI+intern&amp;l=NY&amp;start=10', 'https://example.com/jobs?q=AI+intern&amp;l=NY'), 'https://www.indeed.com/jobs?q=AI+intern&l=NY', 'us', 'AI intern', 'NY');
-    assert.equal(bad.next, null);
+test('partial source failure saves available jobs and summary but fails the run visibly',async()=>{
+    let summary:any;let saved=0;
+    await assert.rejects(runResearch(parseInput({jobTitles:['AI'],maxPages:1}),{
+        cache:cache(),now,request:async(url)=>String(url).includes('arbeitnow')?response(feed()):new Response('bad',{status:503}),
+        saveJobs:async(jobs)=>{saved=jobs.length;},saveSummary:async(value)=>{summary=value;},
+    }),/PARTIAL/);
+    assert.equal(saved,1);assert.equal(summary.status,'partial');assert.equal(summary.errors.length,1);
 });
-
-test('security pages and layout changes never become successful empty results', () => {
-    assert.throws(() => assertPageAccessible('<title>Security Check - Indeed.com</title>', 403), /ACCESS_BLOCKED/);
-    assert.doesNotThrow(() => assertPageAccessible('<title>Jobs</title><footer>This site is protected by reCAPTCHA</footer>'));
-    assert.throws(() => extractSearch('<body>Something changed</body>', seed.url, 'us', 'AI', ''), /SEARCH_LAYOUT_CHANGED/);
-    assert.equal(extractSearch('<body>No jobs found</body>', seed.url, 'us', 'AI', '').explicitEmpty, true);
-    assert.throws(() => extractJob('<body>No details</body>', seed, 'us', now), /DETAIL_LAYOUT_CHANGED/);
-});
-
-test('market selection changes the host, and searches form a title/location product', () => {
-    const searches = searchRequests(config({ country: 'pl', jobTitles: ['AI engineer', 'AI intern'], locations: ['Warsaw', 'Krakow'] }));
-    assert.equal(searches.length, 4);
-    assert.ok(searches.every(value => new URL(value.url).hostname === 'pl.indeed.com'));
-    assert.equal(new URL(searches[0]!.url).searchParams.get('q'), 'AI engineer');
-});
-
-test('invalid input and contradictory limits fail before any crawl', () => {
-    assert.throws(() => config({ country: 'unknown' }));
-    assert.throws(() => config({ jobTitles: [] }));
-    assert.throws(() => config({ maxResults: 50, maxCandidates: 10 }), /maxCandidates/);
-    assert.throws(() => config({ unexpectedField: true }));
-});
-
-test('HTML conversion keeps paragraph boundaries without executing content', () => {
-    assert.equal(htmlText('<p>One</p><p>Two</p><script>throw Error()</script><style>p{}</style>'), 'One\nTwo');
+test('unsupported old Indeed fields are rejected rather than silently ignored',()=>{
+    assert.throws(()=>parseInput({jobTitles:['AI'],easyApplyOnly:true}));
 });

@@ -1,22 +1,19 @@
 {
-  "name": "indeed-job-research-actor",
-  "version": "0.1.0",
+  "name": "public-job-research-actor",
+  "version": "0.2.0",
   "private": true,
-  "description": "Apify Actor for collecting and normalizing Indeed job listings",
+  "description": "Apify Actor for filtering documented public job APIs across employers",
   "type": "module",
   "engines": { "node": ">=22.19" },
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
     "test": "tsx --test test/*.test.ts",
-    "check": "tsc --noEmit",
-    "probe": "node scripts/probe.mjs"
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "apify": "^3.7.0",
     "cheerio": "^1.1.2",
-    "crawlee": "^3.18.0",
-    "playwright": "^1.56.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {

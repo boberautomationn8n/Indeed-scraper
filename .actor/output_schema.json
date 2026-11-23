@@ -1,6 +1,6 @@
 {
   "actorOutputSchemaVersion": 1,
-  "title": "Indeed job research results",
+  "title": "Public job research results",
   "properties": {
     "jobs": {
       "type": "string",
