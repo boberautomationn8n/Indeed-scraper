@@ -19,20 +19,9 @@
         "AI automation engineer"
       ]
     },
-    "locations": {
-      "title": "US city, state, ZIP code, or remote",
-      "description": "Optional locations within the United States. Empty means search the US market without a city restriction. These values do not select another country's Indeed site.",
-      "type": "array",
-      "editor": "stringList",
-      "items": {
-        "type": "string"
-      },
-      "default": [],
-      "maxItems": 20
-    },
     "remoteTypes": {
-      "title": "Remote",
-      "description": "Select Remote, Hybrid work, or both. Leave empty for all work locations, including onsite. These choices require source-provided work-location information.",
+      "title": "Work arrangement",
+      "description": "Where the work is performed: select Remote, Hybrid work, or both. Leave empty for all arrangements, including onsite. The intended search market is the United States.",
       "type": "array",
       "editor": "select",
       "items": {
