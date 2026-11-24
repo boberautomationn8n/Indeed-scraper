@@ -1,30 +1,13 @@
 {
-  "title": "Public Job Research",
+  "title": "Indeed US — form preview",
   "type": "object",
   "schemaVersion": 1,
   "additionalProperties": false,
-  "description": "Search public feeds across employers. Arbeitnow primarily covers Germany/Europe; Remotive provides a limited, delayed remote-job feed. No Indeed scraping, company list, or applications. Results retain source attribution. Feeds are cached for six hours.",
+  "description": "INPUT FORM PREVIEW ONLY. These fields describe the requested Indeed US search. Job collection is disabled: no Indeed requests, proxy use, or applications. An authorized source must be connected before collection can be enabled.",
   "properties": {
-    "sources": {
-      "title": "Job sources",
-      "description": "Select feeds to combine. These do not cover the entire job market.",
-      "type": "array",
-      "editor": "select",
-      "items": {
-        "type": "string",
-        "enum": [
-          "arbeitnow",
-          "remotive"
-        ]
-      },
-      "default": [
-        "arbeitnow",
-        "remotive"
-      ]
-    },
-    "jobTitles": {
-      "title": "Job titles or keywords",
-      "description": "One alternative per entry. Every word within an entry must match (case insensitive, whole words). Example: AI automation requires both words; separate AI and automation entries match either. Title only by default.",
+    "queries": {
+      "title": "Job title, keywords, or company",
+      "description": "One search per entry. Process every entry independently, combine the results, and remove duplicates. For example, AI automation engineer and marketing manager are two searches.",
       "type": "array",
       "editor": "stringList",
       "items": {
@@ -33,19 +16,12 @@
       "minItems": 1,
       "maxItems": 20,
       "prefill": [
-        "AI",
-        "automation"
+        "AI automation engineer"
       ]
     },
-    "searchInDescription": {
-      "title": "Also search descriptions",
-      "description": "Include description words in keyword matching; this can return less relevant jobs.",
-      "type": "boolean",
-      "default": false
-    },
     "locations": {
-      "title": "Location text",
-      "description": "Optional alternatives matched against the source location text. No radius, country inference, or eligibility checking. Remote Worldwide will not match Poland automatically. Empty means no location restriction.",
+      "title": "US city, state, ZIP code, or remote",
+      "description": "Optional locations within the United States. Empty means search the US market without a city restriction. These values do not select another country's Indeed site.",
       "type": "array",
       "editor": "stringList",
       "items": {
@@ -54,56 +30,82 @@
       "default": [],
       "maxItems": 20
     },
-    "workplaceTypes": {
-      "title": "Work arrangement",
-      "description": "Empty means all. Non-remote is not assumed to mean onsite. Hybrid/onsite require an explicit label.",
+    "remoteTypes": {
+      "title": "Remote",
+      "description": "Select Remote, Hybrid work, or both. Leave empty for all work locations, including onsite. These choices require source-provided work-location information.",
       "type": "array",
       "editor": "select",
       "items": {
         "type": "string",
         "enum": [
-          "remote",
           "hybrid",
-          "onsite"
+          "remote"
+        ],
+        "enumTitles": [
+          "Hybrid work",
+          "Remote"
         ]
       },
       "default": []
     },
+    "easyApplyOnly": {
+      "title": "Easily apply on Indeed only",
+      "description": "Require a verified Indeed Easy Apply label. Does not submit applications. This is not equivalent to an external company's simple application form.",
+      "type": "boolean",
+      "default": false
+    },
     "jobTypes": {
-      "title": "Job types",
-      "description": "Empty means all. Multiple selections are alternatives.",
+      "title": "Job type",
+      "description": "Select any combination. Full-time and Part-time means either type is acceptable. Leave empty for all job types. Options here follow the supplied US search screenshots.",
       "type": "array",
       "editor": "select",
       "items": {
         "type": "string",
         "enum": [
           "full-time",
-          "part-time",
           "contract",
-          "temporary",
-          "internship"
+          "part-time"
+        ],
+        "enumTitles": [
+          "Full-time",
+          "Contract",
+          "Part-time"
         ]
       },
       "default": []
     },
-    "experienceLevels": {
+    "excludeGigJobs": {
+      "title": "Exclude gig jobs",
+      "description": "Exclude listings explicitly identified as gig jobs by the data source. Do not assume every contract or part-time job is a gig.",
+      "type": "boolean",
+      "default": false
+    },
+    "experienceLevel": {
       "title": "Experience level",
-      "description": "Uses explicit title/feed labels. Unlabelled roles remain unknown.",
-      "type": "array",
+      "description": "Options follow the supplied US search screenshots. A selected level requires explicit source information; missing labels are not guessed.",
+      "type": "string",
       "editor": "select",
-      "items": {
-        "type": "string",
-        "enum": [
-          "entry",
-          "mid",
-          "senior"
-        ]
-      },
-      "default": []
+      "enum": [
+        "all",
+        "senior",
+        "mid"
+      ],
+      "enumTitles": [
+        "All Experience Levels",
+        "Senior Level",
+        "Mid Level"
+      ],
+      "default": "all"
+    },
+    "fairChanceOnly": {
+      "title": "Encouraged to apply: Fair chance only",
+      "description": "Require the source's explicit Fair chance label. Do not infer this from unrelated wording in a description.",
+      "type": "boolean",
+      "default": false
     },
     "datePosted": {
-      "title": "Feed publication date",
-      "description": "Feed dates can differ from the original employer posting date. Remotive has date-only precision and a 24-hour feed delay.",
+      "title": "Date posted",
+      "description": "Filter the original posting date supplied by the Indeed data source. Jobs you haven't seen is account/history-dependent and is not a date window.",
       "type": "string",
       "editor": "select",
       "enum": [
@@ -113,74 +115,56 @@
         "7",
         "14"
       ],
+      "enumTitles": [
+        "All Dates",
+        "Last 24 hours",
+        "Last 3 days",
+        "Last 7 days",
+        "Last 14 days"
+      ],
       "default": "any"
     },
     "minimumSalary": {
-      "title": "Minimum salary",
-      "description": "Optional. A range matches when its upper bound reaches the minimum. No exchange-rate or period conversion. Salary data is sparse; Arbeitnow has no structured salary field.",
+      "title": "Minimum pay (USD)",
+      "description": "Optional minimum in US dollars for the selected pay period. A range qualifies when its upper bound reaches this amount. Unknown or non-comparable pay is excluded when this filter is set. No currency or period conversion.",
       "type": "integer",
       "editor": "number",
       "minimum": 0
     },
-    "salaryCurrency": {
-      "title": "Salary currency",
-      "description": "Only explicit currencies are compared. A bare dollar sign is ambiguous.",
-      "type": "string",
-      "editor": "select",
-      "enum": [
-        "USD",
-        "GBP",
-        "PLN",
-        "EUR"
-      ],
-      "default": "EUR"
-    },
     "salaryPeriod": {
-      "title": "Salary period",
-      "description": "Only explicit periods are compared; annual pay is not inferred.",
+      "title": "Pay period",
+      "description": "Require explicitly reported pay in this period, even when no minimum amount is entered. Choose Any pay period only when no minimum pay is set. Example: USD 85 per hour does not mean USD 85 per year.",
       "type": "string",
       "editor": "select",
       "enum": [
+        "any",
         "HOUR",
         "DAY",
         "WEEK",
         "MONTH",
         "YEAR"
       ],
-      "default": "YEAR"
-    },
-    "includeUnknownSalary": {
-      "title": "Keep unknown or non-comparable salaries",
-      "description": "When a minimum is set, keep undisclosed, ambiguous, or different-currency/period salaries. Switch off to require a comparable salary.",
-      "type": "boolean",
-      "default": true
-    },
-    "includeUnknownMetadata": {
-      "title": "Keep unknown filter values",
-      "description": "When an arrangement, job type, experience or date filter is selected, retain jobs missing that metadata.",
-      "type": "boolean",
-      "default": false
+      "enumTitles": [
+        "Any pay period",
+        "Per hour",
+        "Per day",
+        "Per week",
+        "Per month",
+        "Per year"
+      ],
+      "default": "any"
     },
     "maxResults": {
       "title": "Maximum matching jobs",
-      "description": "Newest matches saved, up to this limit. Deduplication is within a run using source ID and listing URL.",
+      "description": "Maximum unique jobs saved across all searches combined.",
       "type": "integer",
       "editor": "number",
       "minimum": 1,
       "maximum": 1000,
       "default": 50
-    },
-    "maxPages": {
-      "title": "Maximum Arbeitnow pages",
-      "description": "Fetch these pages once, then filter locally. Remotive uses one feed request regardless of this value. Strict filters may return zero matches.",
-      "type": "integer",
-      "editor": "number",
-      "minimum": 1,
-      "maximum": 10,
-      "default": 3
     }
   },
   "required": [
-    "jobTitles"
+    "queries"
   ]
 }

@@ -1,15 +1,10 @@
 {
   "actorOutputSchemaVersion": 1,
-  "title": "Public job research results",
+  "title": "Form preview setup status",
   "properties": {
-    "jobs": {
-      "type": "string",
-      "title": "Matching jobs",
-      "template": "{{links.apiDefaultDatasetUrl}}/items"
-    },
     "summary": {
       "type": "string",
-      "title": "Run summary",
+      "title": "Setup status — collection disabled",
       "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/SUMMARY"
     }
   }

@@ -4,10 +4,12 @@
   "private": true,
   "description": "Apify Actor for filtering documented public job APIs across employers",
   "type": "module",
-  "engines": { "node": ">=22.19" },
+  "engines": {
+    "node": ">=22.19"
+  },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/main.js",
+    "start": "node form-preview.mjs",
     "test": "tsx --test test/*.test.ts",
     "check": "tsc --noEmit"
   },
